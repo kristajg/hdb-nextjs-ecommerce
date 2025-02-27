@@ -8,8 +8,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  listProducts,
   customizeProductDescription,
+  listProducts,
+  addPersonalizationCache,
+  getPersonalizationCache,
   getUserTraits,
 } from '@/app/actions';
 
@@ -32,10 +34,24 @@ export default function ProductPage({ id, product }) {
         try {
           setProductDescReady(false);
 
-          // Get AI generated customized product description
-          const customDescription = await customizeProductDescription(traits, product.description);
-          setCustomDescription(customDescription);
-          setProductDescReady(true);
+          // Check for personalization cache
+          const traitsCache = await getPersonalizationCache(traits);
+          // If it exists, set in state
+          if (traitsCache.length) {
+            setCustomDescription(traitsCache[0].content);
+            setProductDescReady(true);
+          }
+
+          // If no cache: get OpenAI customized product description && register cache
+          if (!traitsCache || !traitsCache.length) {
+            const customDescription = await customizeProductDescription(traits, product.description);
+
+            // Set in cache
+            addPersonalizationCache(traits, customDescription);
+
+            setCustomDescription(customDescription);
+            setProductDescReady(true);
+          }
 
         } catch (err) {
           console.error('Error fetching data:', err);

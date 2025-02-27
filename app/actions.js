@@ -1,11 +1,11 @@
 'use server';
 import { tables } from 'harperdb';
-const { Product } = tables;
+import { createTraitsKey } from '../lib/utils';
 
 // Harper DB Server Actions
 export async function listProducts(conditions = {}) {
 	const products = [];
-  const results = Product.search(conditions);
+  const results = tables.Product.search(conditions);
 	for await (const product of results) {
 		products.push(product);
 	}
@@ -23,6 +23,27 @@ export async function getUserTraits(id = "1") {
 export async function updateUserTraits(id = "1", traits) {
 	await tables.Traits.put({ id, traits });
 	return 'successfully updated Traits table';
+}
+
+export async function getPersonalizationCache(traits = []) {
+	let key = createTraitsKey(traits);
+	const cache = [];
+	const cacheResults = await tables.PersonalizeCache.search({
+		conditions: [{ attribute: 'key', value: key, comparator: 'equals' }]
+	});
+	for await (const result of cacheResults) {
+		cache.push(result);
+	}
+	return cache;
+}
+
+export async function addPersonalizationCache(traits, content){
+	let key = createTraitsKey(traits);
+	await tables.PersonalizeCache.create({
+		key: key,
+		content: content
+	});
+	return 'successfully added personalization cache';
 }
 
 // Algolia Search Server Actions
